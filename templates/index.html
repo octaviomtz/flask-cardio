@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+<!--
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+-->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+
+<body>
+
+<div class="container">
+    <div class="jumbotron">
+        <h2>PET Imaging Polarmaps analysis using Convolutional Neural Networks</h2> 
+        <p>Select an image</p> 
+    </div>
+
+    <div class="form-group">
+        
+            <label class="btn btn-default">
+                Browse <input id="image-selector" type="file">
+            </label>
+            <button type="submit" class="btn btn-primary" id="predict-button">Submit</button>
+        
+    </div> 
+    <p> Prediction:  <span id="polarmap-prediction"></span></p>
+
+    <br><br>
+    <img id="selected-image" src="">
+
+</div>
+
+
+
+<script>
+    let base64Image;
+    
+    $("#image-selector").change(function() {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let dataURL = reader.result;
+            $("#selected-image").attr("src", dataURL);
+            base64Image = dataURL.replace("data:image/png;base64,","");
+            console.log(base64Image);
+        }
+        reader.readAsDataURL($("#image-selector")[0].files[0]);
+        $("#polarmap-prediction").text("helloooo");
+    });
+
+    $("#predict-button").click(function(event){
+        $("#polarmap-prediction").text("predicting")
+        let message = {
+            image: base64Image
+        }
+        $.post("http://127.0.0.1:5000/predict", JSON.stringify(message), function(response){
+            console.log(response.predictions);
+            $("#polarmap-prediction").text(JSON.stringify(response.predictions));
+        });
+    });
+</script>
+</body>
+</html>
