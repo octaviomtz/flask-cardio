@@ -1,34 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
+<style>
+.bar{
+    fill: #336699;
+    stroke: #FFF;
+}
+* { font-size: 24px; }
+
+</style>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
 <!--
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<script type="text/javascript" src="https://d3js.org/d3.v5.js"></script>
+<script src="https://d3js.org/d3-axis.v1.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter/1.3.12/crossfilter.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/dc/3.0.3/dc.min.js"></script>
+
 </head>
 
 <body>
 
 <div class="container">
     <div class="jumbotron">
-        <h2>PET Imaging Polarmaps analysis using Convolutional Neural Networks</h2> 
-        <p>Select an image</p> 
+        <h2>Deep Learning in PET: Cardiac Polarmaps</h2> 
+        <p>Analyzing three polarmaps</p> 
     </div>
 
     <div class="form-group">
         
             <label class="btn btn-default">
-                Browse <input id="image-selector" type="file">
+                Select an image <input id="image-selector" type="file">
             </label>
-            <button type="submit" class="btn btn-primary" id="predict-button">Submit</button>
+            <button type="submit" class="btn btn-primary" id="predict-button">Predict</button>
         
     </div> 
-    <p> Prediction:  <span id="polarmap-prediction"></span></p>
+    <p><span id="polarmap-prediction"></span></p>
 
+    <img id="selected-image" src="https://upload.wikimedia.org/wikipedia/commons/8/83/Solid_white_bordered.svg" height="400" width="450">
     <br><br>
-    <img id="selected-image" src="">
-
+    <div>
+        <div id="row-chart"></div>
+        <div id="oc-chart"></div>
+        <div id="pie-chart"></div>
+        
+    </div>
 </div>
 
 
@@ -45,19 +64,111 @@
             console.log(base64Image);
         }
         reader.readAsDataURL($("#image-selector")[0].files[0]);
-        $("#polarmap-prediction").text("helloooo");
+        $("#polarmap-prediction").text("");
+        $("#row-chart").empty();
+        $("#pie-chart").empty();
+        $("#oc-chart").empty();
     });
 
     $("#predict-button").click(function(event){
-        $("#polarmap-prediction").text("predicting")
+        //$("#polarmap-prediction").text("predicting")
         let message = {
             image: base64Image
         }
         $.post("http://127.0.0.1:5000/predict", JSON.stringify(message), function(response){
-            console.log(response.predictions);
-            $("#polarmap-prediction").text(JSON.stringify(response.predictions));
+            let object_predictions = Object.entries(response.predictions).map(function(entry){
+                return {
+                    category: entry[0],
+                    value: entry[1]
+                };
+            });
+
+            console.log(response);
+            console.log(object_predictions)
+            /*
+            let cf = crossfilter(object_predictions);
+            let category = cf.dimension(p => p.category);
+
+            dc.rowChart('#row-chart')
+                .dimension(category)
+                .group(category.group().reduceSum(p =>p.value))
+
+            dc.pieChart('#pie-chart')
+                .dimension(category)
+                .group(category.group().reduceSum(p =>p.value))
+
+            dc.renderAll();
+            */
+
+            var score1= [object_predictions[0].value]
+            var score = parseFloat(1-score1).toFixed(4);
+            console.log(score)
+
+            var margin = {top: 30, right: 20, bottom: 70, left: 40},
+                width = 800 - margin.left - margin.right,
+                height = 220 - margin.top - margin.bottom;
+
+            var x = d3.scaleLinear().range([0, width])
+            var y = d3.scaleLinear()
+            x.domain([0, 1])
+
+            var axis = d3.axisBottom(x);
+            axis.ticks(10);
+            axis.font
+
+            var svg = d3.select("#oc-chart").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+                .attr("transform", 
+                      "translate(" + margin.left + "," + margin.top + ")");
+
+            svg.selectAll(".bar")
+                .data([0])
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x",0)
+                .attr("width",0)
+                .attr("y",0)
+                .attr("height",60)
+                .transition()
+                .duration(750)
+                .attr("width",x(score)); 
+
+            svg.append("g")
+                .attr("transform", "translate(0,60)")
+                .call(axis);
+
+            svg.append("text")
+                .attr("transform", "translate(0,60)")
+                .attr("class", "x label")
+                .attr("text-anchor", "middle")
+                .attr("x", width/2)
+                .attr("y", 60)
+                .text("Cardiac event risk");
+
+            svg.selectAll("text2")     
+              .attr("transform", "translate(0,60)")    
+              .data(score)   
+              .enter()
+              .append("text")
+              .style("opacity", 0)
+              .attr("class","score label")
+              .attr("x", x(score)-40) 
+              .attr("y", -10)
+              .text("")
+              .style("font-size",24)
+              .style("font-weight", "normal")
+              .style("font-family","Arial, Helvetica Neue, sans-serif")
+              .transition()
+              .delay(750)
+              .style("opacity", 1)
+              .text(score);
+        
+            //$("#polarmap-prediction").text(score);
         });
     });
+
 </script>
 </body>
 </html>
